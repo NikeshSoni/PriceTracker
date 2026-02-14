@@ -1,7 +1,7 @@
-import { scrapeProduct } from "@/lib/firecrawl";
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { sendPriceDropAlert } from "../../../../lib/email"
+import { createClient } from "@supabase/supabase-js";
+import { scrapeProduct } from "@/lib/firecrawl";
+import { sendPriceDropAlert } from "@/lib/email";
 
 export async function GET() {
     return NextResponse.json({
