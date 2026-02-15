@@ -70,21 +70,30 @@ export async function POST(request) {
                     result.priceChanges++;
 
                     if (newPrice < oldPrice) {
-                        //  Alt
-                        const { data: { user } } = await supabase.auth.admin.getUserById(product.user_id);
+                        if (!product.user_id) {
+                            console.warn(`Product ${product.id} has no user_id, skipping email`);
+                        } else {
+                            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(product.user_id);
 
-                        if (user?.email) {
-                            // Send Email
-
-                            const emailResult = await sendPriceDropAlert(
-                                user.email,
-                                product,
-                                oldPrice,
-                                newPrice
-                            )
-
-                            if (emailResult.success) {
-                                result.alertsSent++;
+                            if (userError) {
+                                console.error(`Failed to get user for product ${product.id}:`, userError.message);
+                            } else {
+                                const user = userData?.user;
+                                const userEmail = user?.email;
+                                if (userEmail) {
+                                    const emailResult = await sendPriceDropAlert(
+                                        userEmail,
+                                        product,
+                                        oldPrice,
+                                        newPrice
+                                    );
+                                    if (emailResult?.success) {
+                                        result.alertsSent++;
+                                    } else {
+                                        const errMsg = typeof emailResult?.error === "object" ? JSON.stringify(emailResult.error) : (emailResult?.error ?? "unknown");
+                                        console.error("Price drop email failed for product", product.id, errMsg);
+                                    }
+                                }
                             }
                         }
                     }
@@ -108,6 +117,13 @@ export async function POST(request) {
         console.error("Cron jon error:", error);
 
         return NextResponse.json({ error: error.message }, { status: 500 })
-
     }
 }
+
+
+
+// curl.exe -X POST https://price-trackerdelta.vercel.app/api/cron/check-prices -H "Authorization: Bearer 4902bd26553f0175f312dd7320a1a9a737ed9ced146f0cf31ebd533a724ff55d"
+// curl.exe -X POST https://localhost:3000/api/cron/check-prices -H "Authorization: Bearer 4902bd26553f0175f312dd7320a1a9a737ed9ced146f0cf31ebd533a724ff55d
+
+
+// https://price-trackerdelta.vercel.app/
